@@ -1,0 +1,30 @@
+{% extends "climate_controls/base.html" %}
+
+<!-- Заполнение навигационной панели списком помещений -->
+{% block navbar %}
+
+	{% for r in rooms %}
+		<li class="nav-item active">
+			<a class="nav-link" href="{% url 'climate_controls:room' r.id %}">{{ r }}</a>
+		</li>
+	{% endfor %}
+
+{% endblock navbar %}
+
+
+{% block header %}
+
+{% endblock header %}
+
+{% block content %}
+
+<h2>Выберите помещение:</h2>
+<ul>
+{% for r in rooms %}
+	<li>
+		<h5><a style="color: #000000" href="{% url 'climate_controls:room' r.id %}">{{ r }}</a></h5>
+	</li>
+{% endfor %}
+</ul>
+
+{% endblock content %}

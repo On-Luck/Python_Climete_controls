@@ -1,0 +1,371 @@
+{% extends "climate_controls/base.html" %}
+
+
+<!-- Заполнение навигационной панели списком помещений -->
+{% block navbar %}
+
+	{% for r in rooms %}
+		<li class="nav-item active">
+			<a class="nav-link" href="{% url 'climate_controls:room' r.id %}">{{ r }} <span class="sr-only">(current)</span></a>
+		</li>
+	{% endfor %}
+
+{% endblock navbar %}
+
+
+<!-- Вывод названия помещения в качестве заголовка страницы -->
+{% block header %}
+<h2>{{ room }}</h2>
+{% endblock header %}
+
+<!-- Основная часть страницы -->
+{% block content %}
+<style type="text/css">
+/* Стиль вкладок */
+.tab {
+    overflow: hidden;
+    border: 1px solid #ccc;
+    background-color: #363d43;
+}
+
+/* Стиль кнопок */
+.tab button {
+	position: relative;
+	text-align: center;
+	color: #ffffff;
+    background-color: inherit;
+    float: initial;
+	border: none;
+    outline: none;
+    cursor: pointer;
+    padding: 14px 16px;
+    transition: 0.3s;
+    font-size: 17px;
+    display: inline-block;
+}
+
+/* Изменение цвета кнопок, когда наведен курсор */
+.tab button:hover {
+    background-color: #485159;
+}
+
+/* Выделение текущей вкладки */
+.tab button.active {
+    background-color: #1c1f23;
+}
+
+/* Style the tab content
+.tabcontent {
+    display: none;
+    padding: 6px 12px;
+    border: 1px solid #ccc;
+    border-top: none;
+} */
+
+/* Стиль кнопки перезагрузки графиков */
+.refresh {
+    float: right;
+    cursor: pointer;
+    font-size: 28px;
+}
+
+.refresh:hover {
+	color: #084f8a;
+}
+</style>
+
+
+<div class="panel panel-default">
+	<div class="panel-heading">
+		<h5>Температура</h5>
+	</div>
+	<!-- Блок температуры, будет перегружаться раз в 10 секунд с помощью AJAX -->
+	<div id="temperature" class="panel-body">
+		{% include 'climate_controls/temperature.html' %}
+	</div>
+</div> 	
+
+<div class="panel panel-default">
+	<div class="panel-heading">
+		<h5>Влажность</h5>
+	</div>
+	<!-- Блок влажности, будет перегружаться раз в 10 секунд с помощью AJAX -->
+	<div id="humidity" class="panel-body">
+		{% include 'climate_controls/humidity.html' %}
+	</div>
+</div> 
+
+<div class="panel panel-default">
+	<div class="panel-heading">
+		<h5>Давление</h5>
+	</div>
+	<!-- Блок атмосферного давления, будет перегружаться раз в 10 секунд с помощью AJAX -->
+	<div id="pressure" class="panel-body">
+		{% include 'climate_controls/pressure.html' %}
+	</div>
+</div> 
+<hr>
+<div class="panel panel-default">
+	<div class="climatic-statistics">
+		<h5>Графики изменения параметров</h5>
+	</div>
+	<div class="panel-heading">
+		<div class="tab" align="center">
+			<button class="tablinks" id="LastDayGraph" onclick="get_chart_data(event, '1day', 0);">За последние сутки</button>
+			<button class="tablinks" onclick="get_chart_data(event, '7day', 0);">За последнюю неделю</button>
+			<button class="tablinks" onclick="get_chart_data(event, '30day', 0);">За последний месяц</button>
+			<button class="tablinks" onclick="get_chart_data(event, '1year', 0);">За последний год</button>
+		</div>
+	</div>
+
+	<span class="refresh" onclick="get_chart_data(event, '', 1)">⟳</span>
+
+	<div id="temperature-chart" class="panel-body">
+		<div class="table-responsive">
+			<center>
+				<canvas id="ChartTemperature" class="chartjs-temperature" width="900" height="350">
+				</canvas>
+			</center>
+		</div>
+	</div>
+	<div id="humidity-chart" class="panel-body">
+		<div class="table-responsive">
+			<center>
+				<canvas id="ChartHumidity" class="chartjs-humidity" width="900" height="350">
+				</canvas>
+			</center>
+		</div>
+	</div>
+	<div id="pressure-chart" class="panel-body">
+		<div class="table-responsive">
+			<center>
+				<canvas id="ChartPressure" class="chartjs-pressure" width="900" height="350">
+				</canvas>
+			</center>
+		</div>
+	</div>
+</div>
+
+{% endblock content %}
+
+{% block javascript %}
+<!-- 
+	Если есть постоянный доступ в интернет: 
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.3/dist/Chart.min.js"></script>
+-->
+
+<!-- Подключение JQuery и Chart.js из локальных файлов-->
+{% load static %}
+<script src="{% static 'scripts/jquery.min.js' %}"></script>
+<script src="{% static 'scripts/Chart.min.js' %}"></script>
+
+<!-- Скрипт обновления полей с текущими климатическими данными с помощью AJAX-->
+<script type="text/javascript">
+
+	// Переменные для всех графиков
+	var last_period = '';
+
+	var chart_options =  {
+		responsive: false,
+		title: {
+			display: true,
+			text: '',
+			fontSize: 18
+		},
+		tooltips: {
+			mode: 'index',
+			intersect: false,
+		},
+		hover: {
+			mode: 'nearest',
+			intersect: true,
+		},
+	};
+
+	// График температуры
+	var ctt = document.getElementById('ChartTemperature').getContext('2d');
+	var TemperatureChart = new Chart(ctt,{});
+	// График влажности
+	var cth = document.getElementById('ChartHumidity').getContext('2d');
+	var HumidityChart = new Chart(cth, {});
+	// График давления
+	var ctp = document.getElementById('ChartPressure').getContext('2d');
+	var PressureChart = new Chart(ctp, {});
+
+	
+	// Функция получени данных для графика
+	function get_chart_data(event, period, reload){
+		
+		// Если не обновление графиков, то получаем новые данные и активируем новую вкладку
+		if (reload == 0){
+			last_period = period;
+
+			tablinks = document.getElementsByClassName('tablinks');
+			for (i = 0; i < tablinks.length; i++){
+				tablinks[i].className = tablinks[i].className.replace(' active', '');
+			}
+			event.currentTarget.className += ' active';
+		}
+		// Создаем список url, по которым будут получены данные для графиков
+		var temperature_api_url = '/api/temperature/' + {{room.id}} + '/' + last_period;
+		var humidity_api_url = '/api/humidity/' + {{room.id}} + '/' + last_period;
+		var pressure_api_url = '/api/pressure/' + {{room.id}} + '/' + last_period;
+		
+		var list_api_urls = [temperature_api_url, humidity_api_url, pressure_api_url];
+		
+		// Забираем данные по каждому URL и строим график
+		list_api_urls.forEach(function(api_url){
+			$.ajax({
+				url: api_url,
+				method: 'GET',
+				success: function(data){
+					console.log(api_url + ' Ok');
+
+					// Если есть данные - заполняем график
+					if (data.labels.length != 0){
+						var labels = data.labels;
+						var datasets = data.datasets;
+
+						if (api_url.indexOf('temperature') + 1){
+							// Уничтожаем экземпляр графика
+							TemperatureChart.destroy();
+							// Создаем новый экземпляр графика
+							TemperatureChart = new Chart(ctt, {
+								type: 'line',
+								data: {
+									labels: labels,
+									datasets: datasets,
+								},
+								options: chart_options
+							});
+							TemperatureChart.options.title.text = data.title;
+							TemperatureChart.update()
+						} 
+						else if (api_url.indexOf('humidity') + 1){
+							// Уничтожаем экземпляр графика
+							HumidityChart.destroy();
+							// Создаем новый экземпляр графика
+							HumidityChart = new Chart(cth, {
+								type: 'line',
+								data: {
+									labels: labels,
+									datasets: datasets,
+								},
+								options: chart_options
+							});
+							HumidityChart.options.title.text = data.title;
+							HumidityChart.update();
+						} 
+						else if (api_url.indexOf('pressure') + 1){
+							// Уничтожаем экземпляр графика
+							PressureChart.destroy();
+							// Создаем новый экземпляр графика
+							PressureChart = new Chart(ctp, {
+								type: 'line',
+								data: {
+									labels: labels,
+									datasets: datasets,
+								},
+								options: chart_options
+							});
+							PressureChart.options.title.text = data.title;
+							PressureChart.update()
+						}
+					} 
+					else{
+						if (api_url.indexOf('temperature') + 1){
+							document.getElementById('ChartTemperature').style.display = "none";
+							var no_data_text = document.createTextNode('Данные по температуре отсутствуют'),
+      						chart_div = document.getElementById("temperature-chart");
+						}
+						else if (api_url.indexOf('humidity') + 1){
+							document.getElementById('ChartHumidity').style.display = "none";
+							var no_data_text = document.createTextNode('Данные по влажности отсутствуют'),
+      						chart_div = document.getElementById("humidity-chart");
+						}
+						else if (api_url.indexOf('pressure') + 1){
+							document.getElementById('ChartPressure').style.display = "none";
+							var no_data_text = document.createTextNode('Данные по атмосферному давлению отсутствуют'),
+      						chart_div = document.getElementById("pressure-chart");
+						}
+						chart_div.appendChild(no_data_text);
+					}
+				}
+			})
+		});
+		/*
+		$.ajax({
+			url: f_url, // Найти способ передавать сюда переменные
+			method:"GET",
+			success: function(data){
+				console.log("ok");
+				console.log(data);
+				labels = data.labels;
+				datasets = data.datasets;
+
+				TemperatureChart.destroy();
+				TemperatureChart = new Chart(ctt, {
+					type: 'line',
+					data: {
+						labels: labels,
+						datasets: datasets,
+					},
+					options: chart_options
+				});
+				TemperatureChart.options.title.text = "Температура, °C";
+				TemperatureChart.update()
+
+			},
+			error: function(error_data){
+				console.log("error");
+				console.log(error_data);
+			}
+		});*/
+	}
+
+// Функция обновления температуры
+	function refresh_temp() {
+	    $.ajax({
+	        url: "{% url 'climate_controls:temperature' room.id %}",
+	        success: function(data) {
+	            $('#temperature').html(data);
+	            setTimeout(refresh_temp, 10000);
+	        },
+	    });
+	}
+
+	// Функция обновления влажности
+	function refresh_humi() {
+		$.ajax({
+	        url: "{% url 'climate_controls:humidity' room.id %}",
+	        success: function(data) {
+	            $('#humidity').html(data);
+	            setTimeout(refresh_humi, 10000);
+	        },
+	    });
+	    
+	}
+
+	// Функция обновления атмосферного давления
+	function refresh_pres() {
+		$.ajax({
+	        url: "{% url 'climate_controls:pressure' room.id %}",
+	        success: function(data) {
+	            $('#pressure').html(data);
+	            setTimeout(refresh_pres, 10000);
+	        },
+	    });
+	}
+
+	// Основная функция
+	$(function(){
+		document.getElementById('LastDayGraph').click();
+	    refresh_temp();
+	    refresh_humi();
+	    refresh_pres();
+	});
+
+</script>
+
+{% endblock javascript %}

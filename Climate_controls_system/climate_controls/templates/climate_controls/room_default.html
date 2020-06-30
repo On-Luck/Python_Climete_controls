@@ -1,0 +1,88 @@
+<html>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+	<!-- Вывод названия помещения в качестве заголовка страницы -->
+	<head>
+		<h2>{{ room }}</h2>
+	</head>
+
+	<body>
+		<!-- Основная часть страницы -->
+		<div class="panel panel-default">
+			<div class="panel-heading">
+				<h5>Температура</h5>
+			</div>
+			<!-- Блок температуры, будет перегружаться раз в 10 секунд с помощью AJAX -->
+			<div id="temperature" class="panel-body">
+				{% include 'climate_controls\temperature.html' %}
+			</div>
+		</div> 	
+
+		<div class="panel panel-default">
+			<div class="panel-heading">
+				<h5>Влажность</h5>
+			</div>
+			<!-- Блок влажности, будет перегружаться раз в 10 секунд с помощью AJAX -->
+			<div id="humidity" class="panel-body">
+				{% include 'climate_controls\humidity.html' %}
+			</div>
+		</div> 
+
+		<div class="panel panel-default">
+			<div class="panel-heading">
+				<h5>Давление</h5>
+			</div>
+			<!-- Блок атмосферного давления, будет перегружаться раз в 10 секунд с помощью AJAX -->
+			<div id="pressure" class="panel-body">
+				{% include 'climate_controls\pressure.html' %}
+			</div>
+		</div> 
+
+
+		<!-- Скрипт -->
+		<script type="text/javascript">
+
+		// Функция обновления температуры
+		function refresh_temp() {
+		    $.ajax({
+		        url: "{% url 'climate_controls:temperature' room.id %}",
+		        success: function(data) {
+		            $('#temperature').html(data);
+		            setTimeout(refresh_temp,10000);
+		        },
+		    });
+		};
+
+		// Функция обновления влажности
+		function refresh_humi() {
+			$.ajax({
+		        url: "{% url 'climate_controls:humidity' room.id %}",
+		        success: function(data) {
+		            $('#humidity').html(data);
+		            setTimeout(refresh_humi,10000);
+		        },
+		    });
+		    
+		};
+
+		// Функция обновления атмосферного давления
+		function refresh_pres() {
+			$.ajax({
+		        url: "{% url 'climate_controls:pressure' room.id %}",
+		        success: function(data) {
+		            $('#pressure').html(data);
+		            setTimeout(refresh_pres,10000);
+		        },
+		    });
+		};
+
+		// Основная функция
+		$(function(){
+		    refresh_temp();
+		    refresh_humi();
+		    refresh_pres();
+		});
+
+		</script>
+	</body>
+
+</html>

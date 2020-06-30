@@ -1,0 +1,47 @@
+{% load bootstrap4 %}
+
+<!DOCTYPE html>
+<html lang="ru">
+	<head>
+		
+		<meta charset="utf-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+
+		<title>Контроль климата</title>
+
+		{% bootstrap_css %}
+		{% bootstrap_javascript %}
+
+	</head>
+
+	<body>
+		<!-- Статическая навигационная панель -->
+		<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+			<div class="container">
+				<div class="navbar-header">
+					<button type="button" class="navbar-toggler collapsed" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false">
+						<span class="navbar-toggler-icon"></span>
+					</button>
+					<a class="navbar-brand" href="{% url 'climate_controls:index' %}">Контроль климата</a>
+				</div>
+				<div class="navbar-collapse collapse" id="navbarSupportedContent">
+					<ul class="navbar-nav mr-auto">
+						<!-- Автоматически заполняется в наследующих шаблонах -->
+						{% block navbar %}{% endblock navbar %}
+					</ul>
+				</div>
+			</div>
+		</nav> <!-- /Навигационная панель -->
+
+		<div class="container">
+			<div class="page-header">
+				{% block header %}{% endblock header %}
+			</div>
+			<div>
+				{% block content %}{% endblock content %}
+			</div>
+		</div><!-- /container -->
+		{% block javascript %}{% endblock javascript %}
+	</body>
+</html>
