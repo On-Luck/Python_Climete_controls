@@ -24,12 +24,16 @@
 Варианты взаимодействия с системой
 <details><summary>Пример страницы помещения</summary>
 ![Страница помещения](https://raw.githubusercontent.com/On-Luck/Python_Climete_controls/master/Climate_controls_system/room_example.png)
-</details>
-<details><summary>Пример взаимодействия с чат-ботом vk.com</summary>
-Для взаимодействия с чат-ботом используются клавиатуры помещений и
 
+</details>
+
+<details><summary>Пример взаимодействия с чат-ботом vk.com</summary>
+Для взаимодействия с чат-ботом используются клавиатуры помещений и функций.
+
+#### Пример диалога
 ![Чат-бот диалог](https://raw.githubusercontent.com/On-Luck/Python_Climete_controls/master/Climate_controls_system/vkbot/dialog_example.jpg)
-Пример графиков
+
+#### Пример графиков
 ![График изменений параметров чат-бот](https://raw.githubusercontent.com/On-Luck/Python_Climete_controls/master/Climate_controls_system/vkbot/graphs_example.jpg)
 
 </details>
